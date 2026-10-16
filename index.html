@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>多人日历 · 项目协作版 · 长按删除</title>
+    <!-- Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* 去掉移动端点击灰色背景 */
+        }
+
+        body {
+            background: #f0f2f5;
+            padding: 1rem 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* 适配刘海屏/安全区域 */
+            padding-top: max(0.8rem, env(safe-area-inset-top));
+            padding-bottom: max(0.8rem, env(safe-area-inset-bottom));
+            padding-left: max(0.5rem, env(safe-area-inset-left));
+            padding-right: max(0.5rem, env(safe-area-inset-right));
+        }
+
+        .app-container {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            overflow: hidden;
+            padding: 1.5rem 1.2rem;
+        }
+
+        /* 标题区域移动端更紧凑 */
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.25rem;
+            flex-wrap: wrap;
+        }
+
+        h1 i {
+            color: #3b82f6;
+            font-size: 1.7rem;
+        }
+
+        .subhead {
+            color: #64748b;
+            margin-bottom: 1.2rem;
+            font-size: 0.85rem;
+            border-left: 4px solid #3b82f6;
+            padding: 0.4rem 0.8rem;
+            background: #f8fafc;
+            border-radius: 0 8px 8px 0;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+        }
+
+        /* 表单区域移动端适配 */
+        .form-panel {
+            background: #f8fafc;
+            border-radius: 1.2rem;
+            padding: 1rem;
+            margin-bottom: 1.2rem;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 0.8rem;
+        }
+
+        .input-group {
+            flex: 1 1 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            min-width: 0; /* 防止flex溢出 */
+        }
+
+        .input-group label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .input-group label i {
+            font-size: 0.8rem;
+            color: #3b82f6;
+        }
+
+        .input-group input {
+            padding: 0.7rem 0.8rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.9rem;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.15s;
+            background: white;
+            width: 100%;
+            /* 移动端输入框字体不能小于16px防止缩放 */
+            font-size: 16px;
+        }
+
+        .input-group input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .add-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 0.9rem;
+            padding: 0.7rem 1.4rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+            white-space: nowrap;
+            min-height: 48px; /* 触摸友好 */
+            flex: 1 0 auto;
+        }
+
+        .add-btn:hover {
+            background: #2563eb;
+        }
+
+        .add-btn:active {
+            transform: scale(0.97);
+            background: #1d4ed8;
+        }
+
+        /* 日历头部 */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+        }
+
+        .month-year {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .month-year i {
+            color: #3b82f6;
+            font-size: 1.3rem;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 0.4rem;
+            align-items: center;
+        }
+
+        .nav-btn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            width: 2.4rem;
+            height: 2.4rem;
+            border-radius: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            min-width: 44px;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        .nav-btn:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        .today-btn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.7rem;
+            padding: 0 0.9rem;
+            height: 2.4rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+
+        .today-btn:hover {
+            background: #f1f5f9;
+        }
+
+        /* 星期行 (移动端隐藏或紧凑) */
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            margin-bottom: 0.3rem;
+            gap: 0.2rem;
+        }
+
+        .weekday {
+            font-weight: 600;
+            font-size: 0.65rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 0.3rem 0;
+        }
+
+        /* 日历网格 - 移动端使用更小的间距和高度 */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.2rem;
+        }
+
+        .day-cell {
+            background: white;
+            border-radius: 0.6rem;
+            min-height: 5rem;
+            padding: 0.3rem 0.3rem 0.3rem 0.3rem;
+            border: 1px solid #e9eef3;
+            transition: all 0.1s;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            overflow: hidden;
+            /* 确保触摸事件不误触 */
+            touch-action: manipulation;
+        }
+
+        .day-cell:hover {
+            border-color: #cbd5e1;
+            background: #fefefe;
+        }
+
+        .day-cell.other-month {
+            background: #f9fbfd;
+            opacity: 0.65;
+            border-color: #eff2f6;
+        }
+
+        .day-cell.today {
+            border: 2px solid #3b82f6;
+            background: #f0f7ff;
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.1);
+        }
+
+        .day-number {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .other-month .day-number {
+            color: #94a3b8;
+        }
+
+        .today .day-number {
+            color: #2563eb;
+        }
+
+        /* 事件列表 - 滚动条美化 (移动端更小) */
+        .events-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            overflow-y: auto;
+            flex: 1;
+            max-height: 3.8rem;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+            padding-right: 0.1rem;
+            /* 长按删除相关 */
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: pan-y; /* 允许垂直滚动，但保留点击 */
+        }
+
+        .events-container::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .events-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        .events-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+
+        /* 项目卡片 - 增加长按交互 */
+        .event-card {
+            background: #eef2ff;
+            border-left: 3px solid #3b82f6;
+            border-radius: 0.3rem;
+            padding: 0.25rem 0.3rem;
+            font-size: 0.6rem;
+            line-height: 1.2;
+            color: #1e293b;
+            word-break: break-word;
+            transition: 0.1s;
+            cursor: pointer; /* 表示可点击/长按 */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            /* 长按删除核心: 阻止默认菜单、选择 */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+            /* 添加过渡效果让删除更平滑 */
+            transform-origin: left center;
+        }
+
+        .event-card:active {
+            background: #dbeafe;
+            transform: scale(0.98);
+        }
+
+        .event-card strong {
+            display: block;
+            font-weight: 700;
+            color: #1e40af;
+            font-size: 0.6rem;
+            margin-bottom: 0.05rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .event-card span {
+            display: block;
+            font-size: 0.55rem;
+            color: #475569;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* 删除提示动画 */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            50% { transform: translateX(3px); }
+            75% { transform: translateX(-2px); }
+            100% { transform: translateX(0); }
+        }
+
+        .event-card.delete-pending {
+            animation: shake 0.3s ease;
+            background: #fee2e2;
+            border-left-color: #ef4444;
+        }
+
+        /* 空状态提示 */
+        .empty-message {
+            color: #94a3b8;
+            font-size: 0.6rem;
+            text-align: center;
+            padding: 0.3rem 0;
+            font-style: italic;
+        }
+
+        /* 底部统计 */
+        .footer-stats {
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            color: #64748b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #e9eef3;
+            padding-top: 0.8rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            background: #eef2ff;
+            color: #3b82f6;
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        /* 提示气泡 */
+        .toast-message {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            white-space: nowrap;
+            max-width: 90vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .toast-message.show {
+            opacity: 1;
+        }
+
+        /* 移动端适配：小屏微调 */
+        @media (max-width: 550px) {
+            .app-container {
+                padding: 1rem 0.8rem;
+                border-radius: 1.2rem;
+            }
+            h1 {
+                font-size: 1.3rem;
+            }
+            h1 i {
+                font-size: 1.4rem;
+            }
+            .day-cell {
+                min-height: 4.2rem;
+                padding: 0.2rem;
+            }
+            .event-card {
+                font-size: 0.55rem;
+                padding: 0.15rem 0.2rem;
+            }
+            .event-card strong {
+                font-size: 0.55rem;
+            }
+            .event-card span {
+                font-size: 0.5rem;
+            }
+            .events-container {
+                max-height: 3rem;
+            }
+            .weekday {
+                font-size: 0.55rem;
+            }
+            .day-number {
+                font-size: 0.65rem;
+            }
+            .month-year {
+                font-size: 1.1rem;
+            }
+            .nav-btn, .today-btn {
+                min-width: 40px;
+                min-height: 40px;
+                height: 2.2rem;
+            }
+        }
+
+        /* 确保日期输入框在iOS上不显示怪异样式 */
+        input[type="date"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: white;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>
+        <i class="fas fa-calendar-alt"></i> 多人项目日历
+    </h1>
+    <div class="subhead">
+        <i class="fas fa-users" style="margin-right: 6px;"></i>
+        输入日期和简介，项目自动显示 · 长按项目可删除
+    </div>
+
+    <!-- 输入表单 -->
+    <div class="form-panel">
+        <div class="input-group">
+            <label><i class="fas fa-calendar-day"></i> 项目日期</label>
+            <input type="date" id="projectDate" value="">
+        </div>
+        <div class="input-group" style="flex: 2 1 200px;">
+            <label><i class="fas fa-pen"></i> 项目简介</label>
+            <input type="text" id="projectDesc" placeholder="例如：前端评审会议" maxlength="80">
+        </div>
+        <button class="add-btn" id="addProjectBtn">
+            <i class="fas fa-plus-circle"></i> 添加
+        </button>
+    </div>
+
+    <!-- 日历头部 -->
+    <div class="calendar-header">
+        <div class="month-year" id="monthYearDisplay">
+            <i class="fas fa-calendar-week"></i>
+            <span id="monthYearText">2025年3月</span>
+        </div>
+        <div class="nav-buttons">
+            <button class="nav-btn" id="prevMonthBtn" title="上个月"><i class="fas fa-chevron-left"></i></button>
+            <button class="today-btn" id="todayBtn"><i class="fas fa-dot-circle"></i> 今天</button>
+            <button class="nav-btn" id="nextMonthBtn" title="下个月"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <!-- 星期标题 (移动端保留，但字体小) -->
+    <div class="weekdays">
+        <div class="weekday">一</div>
+        <div class="weekday">二</div>
+        <div class="weekday">三</div>
+        <div class="weekday">四</div>
+        <div class="weekday">五</div>
+        <div class="weekday">六</div>
+        <div class="weekday">日</div>
+    </div>
+
+    <!-- 日历网格 -->
+    <div class="calendar-grid" id="calendarGrid"></div>
+
+    <!-- 底部统计 -->
+    <div class="footer-stats">
+        <div><i class="fas fa-database" style="margin-right: 4px;"></i> 数据保存在本地 · 长按项目删除</div>
+        <div class="badge" id="projectCount">0 个项目</div>
+    </div>
+</div>
+
+<!-- 用于显示提示信息 -->
+<div id="toast" class="toast-message"></div>
+
+<script>
+    (function() {
+        // ---------- 数据存储 ----------
+        const STORAGE_KEY = 'multi_user_calendar_projects';
+
+        // 数据结构: { 'YYYY-MM-DD': [ { desc: '简介' }, ... ] }
+        let projects = {};
+
+        // 当前视图日期
+        let currentDate = new Date();
+        let currentYear = currentDate.getFullYear();
+        let currentMonth = currentDate.getMonth(); // 0-11
+
+        // 长按相关变量
+        let longPressTimer = null;
+        const LONG_PRESS_DURATION = 600; // 600ms 触发删除确认
+        let isLongPressActive = false;
+
+        // DOM 元素
+        const calendarGrid = document.getElementById('calendarGrid');
+        const monthYearText = document.getElementById('monthYearText');
+        const projectDateInput = document.getElementById('projectDate');
+        const projectDescInput = document.getElementById('projectDesc');
+        const addBtn = document.getElementById('addProjectBtn');
+        const prevBtn = document.getElementById('prevMonthBtn');
+        const nextBtn = document.getElementById('nextMonthBtn');
+        const todayBtn = document.getElementById('todayBtn');
+        const projectCountSpan = document.getElementById('projectCount');
+        const toastEl = document.getElementById('toast');
+
+        // 显示提示信息
+        function showToast(msg, duration = 1800) {
+            toastEl.textContent = msg;
+            toastEl.classList.add('show');
+            clearTimeout(toastEl._timer);
+            toastEl._timer = setTimeout(() => {
+                toastEl.classList.remove('show');
+            }, duration);
+        }
+
+        // ---------- 初始化默认日期 (今天) ----------
+        function setDefaultDate() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            projectDateInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+
+        // ---------- 从 localStorage 加载数据 ----------
+        function loadProjects() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try {
+                    projects = JSON.parse(stored);
+                    Object.keys(projects).forEach(key => {
+                        if (!Array.isArray(projects[key])) {
+                            projects[key] = [];
+                        }
+                    });
+                } catch (e) {
+                    console.warn('解析本地数据失败，使用空数据');
+                    projects = {};
+                }
+            } else {
+                // 添加一些示例数据
+                const today = new Date();
+                const y = today.getFullYear();
+                const m = today.getMonth();
+                const d = today.getDate();
+
+                const todayStr = formatDateKey(new Date(y, m, d));
+                const tomorrowStr = formatDateKey(new Date(y, m, d + 1));
+                const threeDaysLater = formatDateKey(new Date(y, m, d + 3));
+                const yesterdayStr = formatDateKey(new Date(y, m, d - 1));
+
+                projects = {
+                    [todayStr]: [{ desc: '项目启动会 · 全体成员' }],
+                    [tomorrowStr]: [{ desc: 'UI 设计评审' }],
+                    [threeDaysLater]: [{ desc: '前端开发联调' }],
+                    [yesterdayStr]: [{ desc: '需求梳理 (已完成)' }]
+                };
+                saveProjects();
+            }
+            updateProjectCount();
+        }
+
+        // 保存到 localStorage
+        function saveProjects() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+            updateProjectCount();
+        }
+
+        // 更新项目总数
+        function updateProjectCount() {
+            let total = 0;
+            Object.values(projects).forEach(arr => total += arr.length);
+            projectCountSpan.textContent = total + ' 个项目';
+        }
+
+        // 格式化日期为 YYYY-MM-DD
+        function formatDateKey(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // ---------- 删除项目 ----------
+        function deleteProject(dateKey, index) {
+            if (!projects[dateKey] || !projects[dateKey][index]) return;
+
+            // 从数组中移除
+            projects[dateKey].splice(index, 1);
+            // 如果该日期没有项目了，删除整个键
+            if (projects[dateKey].length === 0) {
+                delete projects[dateKey];
+            }
+
+            saveProjects();
+            renderCalendar();
+            showToast('项目已删除');
+        }
+
+        // ---------- 日历渲染 (适配长按) ----------
+        function renderCalendar() {
+            const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+            monthYearText.textContent = `${currentYear}年 ${monthNames[currentMonth]}`;
+
+            const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+            let firstDayWeekday = firstDayOfMonth.getDay();
+            let offset = (firstDayWeekday + 6) % 7;
+
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const prevMonthDate = new Date(currentYear, currentMonth, 0);
+            const daysInPrevMonth = prevMonthDate.getDate();
+
+            const today = new Date();
+            const todayStr = formatDateKey(today);
+
+            const totalCells = 42;
+            let cells = [];
+
+            // 上月
+            for (let i = 0; i < offset; i++) {
+                const day = daysInPrevMonth - offset + i + 1;
+                const date = new Date(currentYear, currentMonth - 1, day);
+                cells.push({
+                    date: date,
+                    dayNumber: day,
+                    isCurrentMonth: false,
+                    dateKey: formatDateKey(date)
+                });
+            }
+
+            // 当月
+            for (let d = 1; d <= daysInMonth; d++) {
+                const date = new Date(currentYear, currentMonth, d);
+                cells.push({
+                    date: date,
+                    dayNumber: d,
+                    isCurrentMonth: true,
+                    dateKey: formatDateKey(date)
+                });
+            }
+
+            // 下月
+            const remaining = totalCells - cells.length;
+            for (let i = 1; i <= remaining; i++) {
+                const date = new Date(currentYear, currentMonth + 1, i);
+                cells.push({
+                    date: date,
+                    dayNumber: i,
+                    isCurrentMonth: false,
+                    dateKey: formatDateKey(date)
+                });
+            }
+
+            // 清空并重新生成
+            calendarGrid.innerHTML = '';
+
+            cells.forEach(cell => {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'day-cell';
+                if (!cell.isCurrentMonth) {
+                    dayCell.classList.add('other-month');
+                }
+                if (cell.dateKey === todayStr) {
+                    dayCell.classList.add('today');
+                }
+
+                const dayNumberDiv = document.createElement('div');
+                dayNumberDiv.className = 'day-number';
+                dayNumberDiv.textContent = cell.dayNumber;
+                dayCell.appendChild(dayNumberDiv);
+
+                const eventsContainer = document.createElement('div');
+                eventsContainer.className = 'events-container';
+
+                const dayProjects = projects[cell.dateKey] || [];
+
+                if (dayProjects.length === 0) {
+                    const emptyMsg = document.createElement('div');
+                    emptyMsg.className = 'empty-message';
+                    emptyMsg.textContent = '—';
+                    eventsContainer.appendChild(emptyMsg);
+                } else {
+                    // 显示项目卡片，每个卡片绑定长按事件
+                    dayProjects.forEach((proj, idx) => {
+                        const card = document.createElement('div');
+                        card.className = 'event-card';
+                        // 保存索引和日期，方便删除
+                        card.dataset.dateKey = cell.dateKey;
+                        card.dataset.index = idx;
+                        card.dataset.desc = proj.desc;
+
+                        const descStrong = document.createElement('strong');
+                        descStrong.textContent = '📌 ' + (proj.desc.length > 18 ? proj.desc.slice(0, 16) + '…' : proj.desc);
+                        const descSpan = document.createElement('span');
+                        descSpan.textContent = proj.desc.length > 16 ? proj.desc.slice(0, 14) + '…' : proj.desc;
+                        card.appendChild(descStrong);
+                        card.appendChild(descSpan);
+                        card.title = proj.desc; // 悬停显示完整
+
+                        // --- 长按删除逻辑 (同时支持鼠标和触摸) ---
+                        // 用变量保存当前长按的card和定时器，但全局变量管理可能冲突，使用card自身属性
+                        // 采用常规方式: 在card上监听 mousedown / touchstart 开启计时器
+                        const startLongPress = (e) => {
+                            // 如果是鼠标右键，不处理
+                            if (e.type === 'mousedown' && e.button !== 0) return;
+
+                            // 阻止文本选择等默认行为（但保留滚动）
+                            // 注意：不能阻止所有默认行为，否则会影响滚动，但可阻止长按菜单
+                            // 对于 touchstart，我们可以在定时器触发后阻止默认
+                            // 这里先清除之前的定时器
+                            if (longPressTimer) {
+                                clearTimeout(longPressTimer);
+                                longPressTimer = null;
+                            }
+
+                            // 添加pending样式(可选)
+                            card.classList.add('delete-pending');
+
+                            // 设置定时器
+                            longPressTimer = setTimeout(() => {
+                                // 触发删除确认
+                                isLongPressActive = true;
+                                // 移除样式
+                                card.classList.remove('delete-pending');
+
+                                // 弹出确认框
+                                const dateKey = card.dataset.dateKey;
+                                const index = parseInt(card.dataset.index, 10);
+                                const desc = card.dataset.desc;
+
+                                // 使用 confirm 确认删除 (移动端也支持)
+                                const confirmMsg = `确定要删除项目吗？\n“${desc}”`;
+                                if (window.confirm(confirmMsg)) {
+                                    deleteProject(dateKey, index);
+                                } else {
+                                    // 用户取消，不做任何操作
+                                }
+
+                                // 重置长按状态
+                                longPressTimer = null;
+                                // 延迟重置 isLongPressActive，防止后续 click 事件
+                                setTimeout(() => { isLongPressActive = false; }, 100);
+                            }, LONG_PRESS_DURATION);
+
+                            // 对于触摸事件，阻止默认行为（如弹出菜单），但不影响滚动
+                            // 注意：如果在 touchstart 里 preventDefault，页面可能无法滚动，所以我们只在使用长按触发时处理
+                            // 更好的方式: 在 touchstart 里不阻止默认，但在 touchmove 时取消长按
+                        };
+
+                        const cancelLongPress = () => {
+                            if (longPressTimer) {
+                                clearTimeout(longPressTimer);
+                                longPressTimer = null;
+                            }
+                            card.classList.remove('delete-pending');
+                        };
+
+                        // 鼠标事件
+                        card.addEventListener('mousedown', startLongPress);
+                        card.addEventListener('mouseup', cancelLongPress);
+                        card.addEventListener('mouseleave', cancelLongPress);
+
+                        // 触摸事件
+                        card.addEventListener('touchstart', (e) => {
+                            // 不阻止默认，允许滚动；但为了防止长按弹出系统菜单，可以添加 CSS -webkit-touch-callout: none
+                            startLongPress(e);
+                        }, { passive: true });
+
+                        card.addEventListener('touchend', (e) => {
+                            cancelLongPress();
+                            // 如果已经触发长按删除，阻止后续 click 事件
+                            if (isLongPressActive) {
+                                e.preventDefault();
+                                // 重置状态
+                                isLongPressActive = false;
+                            }
+                        });
+
+                        card.addEventListener('touchmove', (e) => {
+                            // 如果手指移动，取消长按
+                            cancelLongPress();
+                        }, { passive: true });
+
+                        // 防止点击时如果长按后误触发（click事件）
+                        card.addEventListener('click', (e) => {
+                            if (isLongPressActive) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                isLongPressActive = false;
+                            }
+                        });
+
+                        eventsContainer.appendChild(card);
+                    });
+                }
+
+                dayCell.appendChild(eventsContainer);
+                calendarGrid.appendChild(dayCell);
+            });
+
+            updateProjectCount();
+        }
+
+        // ---------- 添加项目 ----------
+        function addProject() {
+            const dateVal = projectDateInput.value.trim();
+            const descVal = projectDescInput.value.trim();
+
+            if (!dateVal) {
+                showToast('请选择一个日期');
+                return;
+            }
+            if (!descVal) {
+                showToast('请输入项目简介');
+                return;
+            }
+
+            const dateObj = new Date(dateVal + 'T00:00:00');
+            if (isNaN(dateObj.getTime())) {
+                showToast('日期格式无效');
+                return;
+            }
+
+            const key = formatDateKey(dateObj);
+
+            if (!projects[key]) {
+                projects[key] = [];
+            }
+
+            projects[key].push({ desc: descVal });
+
+            saveProjects();
+            renderCalendar();
+
+            projectDescInput.value = '';
+            projectDescInput.focus();
+
+            // 如果添加的日期不在当前月份，跳转
+            const addedYear = dateObj.getFullYear();
+            const addedMonth = dateObj.getMonth();
+            if (addedYear !== currentYear || addedMonth !== currentMonth) {
+                currentYear = addedYear;
+                currentMonth = addedMonth;
+                renderCalendar();
+            }
+
+            showToast('项目已添加');
+        }
+
+        // ---------- 月份导航 ----------
+        function goPrevMonth() {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        }
+
+        function goNextMonth() {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        }
+
+        function goToday() {
+            const today = new Date();
+            currentYear = today.getFullYear();
+            currentMonth = today.getMonth();
+            renderCalendar();
+            setDefaultDate();
+        }
+
+        // ---------- 初始化 ----------
+        function init() {
+            loadProjects();
+            setDefaultDate();
+            renderCalendar();
+
+            addBtn.addEventListener('click', addProject);
+            projectDescInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addProject();
+                }
+            });
+            prevBtn.addEventListener('click', goPrevMonth);
+            nextBtn.addEventListener('click', goNextMonth);
+            todayBtn.addEventListener('click', goToday);
+
+            // 移动端为了防止页面被输入框顶起导致布局问题，可考虑监听 resize (非必须)
+            // 点击其他区域取消长按状态 (比如全局点击)
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.event-card')) {
+                    // 如果点击的不是卡片，确保清除所有长按pending状态
+                    document.querySelectorAll('.event-card.delete-pending').forEach(c => c.classList.remove('delete-pending'));
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                }
+            });
+        }
+
+        init();
+    })();
+</script>
+</body>
+</html>
